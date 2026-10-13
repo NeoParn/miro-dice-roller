@@ -94,10 +94,18 @@
 </head>
 <body>
 <div id="app"></div>
+<script src="https://miro.com/app/static/sdk/v2/miro.js"></script>
 <script type="module">
   import { startApp } from './app.js';
   import { standaloneBackend } from './backend.js';
-  startApp(document.getElementById('app'), standaloneBackend());
+  import { miroBackend } from './backend-miro.js';
+  async function pickBackend() {
+    if (window.self !== window.top && window.miro?.board) {
+      try { await miro.board.getUserInfo(); return miroBackend(); } catch { /* not inside Miro */ }
+    }
+    return standaloneBackend();
+  }
+  startApp(document.getElementById('app'), await pickBackend());
 </script>
 </body>
 </html>

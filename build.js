@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const mods = ['engine.js', 'games/fabula-ultima.js', 'backend.js', 'app.js'];
+// backend-miro.js is left out of the standalone bundle on purpose.
 const strip = (src) => src
   .replace(/^import\s[^;]*;\s*$/gm, '')
   .replace(/^export default [^;]*;\s*$/gm, '')

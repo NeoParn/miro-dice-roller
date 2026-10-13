@@ -84,6 +84,8 @@ export async function startApp(root, backend) {
     return h('div', { class: 'hdr' },
       h('span', { class: 'game' }, game.name),
       h('span', { class: 'user' }, state.user.name),
+      backend.placeTray ? h('button', { class: 'ghost small', title: 'Find or recreate the dice tray on the board',
+        onclick: () => backend.placeTray().catch((e) => { errorMsg = e.message; render(); }) }, 'Tray') : null,
     );
   }
 
