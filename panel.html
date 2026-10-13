@@ -99,9 +99,10 @@
 <div id="app"></div>
 <script src="https://miro.com/app/static/sdk/v2/miro.js"></script>
 <script type="module">
-  import { startApp } from './app.js';
-  import { standaloneBackend } from './backend.js';
-  import { miroBackend } from './backend-miro.js';
+  // Load the bundle with the same ?v= stamp the headless page opened us with, so a fresh
+  // open always gets fresh code despite GitHub Pages' 10-minute cache.
+  const v = new URLSearchParams(location.search).get('v') || Date.now();
+  const { startApp, standaloneBackend, miroBackend } = await import('./panel.bundle.js?v=' + v);
   async function pickBackend() {
     const framed = window.self !== window.top;
     if (framed && window.miro?.board) {
