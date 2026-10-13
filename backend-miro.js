@@ -1,8 +1,33 @@
 // Miro backend: identity from Miro, dice tray as a shared board item,
-// characters in the browser for now (6b moves them to the Google Sheet).
+// characters and the permanent log in the Google Sheet (via Apps Script).
+// If SHEET_URL is empty or the sheet is unreachable, characters fall back to this browser.
+import { SHEET_URL } from './config.js';
 
 const CHAR_KEY = 'diceRoller.characters';
 const TRAY_KEY = 'diceTrayId';
+
+// Weapons travel to the sheet as one text cell: "Greatsword +10 physical; Fireball +15 fire"
+function weaponsToText(list) {
+  return (list || []).map((w) => `${w.name} +${w.damage} ${w.type}`).join('; ');
+}
+function weaponsFromText(text) {
+  return String(text || '').split(';').map((s) => s.trim()).filter(Boolean).map((s) => {
+    const m = s.match(/^(.*?)\s*\+(\d+)\s*(\w+)?$/);
+    return m ? { name: m[1].trim(), damage: +m[2], type: m[3] || 'physical' } : { name: s, damage: 0, type: 'physical' };
+  });
+}
+
+async function sheetGet(params) {
+  const url = SHEET_URL + '?' + new URLSearchParams(params);
+  const res = await fetch(url, { redirect: 'follow' });
+  return res.json();
+}
+async function sheetPost(body) {
+  // text/plain keeps this a "simple" request, so no CORS preflight (Apps Script can't answer one).
+  const res = await fetch(SHEET_URL, { method: 'POST', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  return res.json();
+}
 
 function loadChars() { try { return JSON.parse(localStorage.getItem(CHAR_KEY)) || []; } catch { return []; } }
 function saveChars(list) { try { localStorage.setItem(CHAR_KEY, JSON.stringify(list)); } catch {} }
@@ -71,10 +96,25 @@ export function miroBackend() {
     },
 
     async loadCharacters(userId) {
+      if (SHEET_URL) {
+        try {
+          const r = await sheetGet({ action: 'characters', ownerId: userId });
+          if (r.ok) {
+            const list = r.characters.map((c) => ({ ...c, weapons: weaponsFromText(c.weapons) }));
+            saveChars(list); // local copy for offline fallback
+            return list;
+          }
+        } catch (e) { console.warn('sheet unreachable, using local copy', e); }
+      }
       return loadChars().filter((c) => c.ownerId === userId);
     },
 
     async saveCharacter(ch) {
+      if (SHEET_URL) {
+        const r = await sheetPost({ action: 'saveCharacter', character: { ...ch, weapons: weaponsToText(ch.weapons) } });
+        if (!r.ok) throw new Error('Sheet refused the save: ' + r.error);
+        ch.id = r.character.id;
+      }
       const list = loadChars();
       if (!ch.id) ch.id = 'c' + Date.now();
       const i = list.findIndex((c) => c.id === ch.id);
@@ -84,7 +124,9 @@ export function miroBackend() {
     },
 
     async logRoll(entry) {
-      // 6b: post to the Google Sheet. Until then, nothing permanent.
+      if (!SHEET_URL) return;
+      try { await sheetPost({ action: 'log', entry }); }
+      catch (e) { console.warn('log failed', e); }
     },
 
     async showOnTray(entry) {
