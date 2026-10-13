@@ -70,28 +70,42 @@
 
   .tray { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
   .tray.empty { color: var(--muted); text-align: center; padding: 16px; }
-  .tray.is-crit { border-color: var(--crit); } .tray.is-fumble { border-color: var(--fumble); }
+  .tray.is-good { border-color: var(--crit); } .tray.is-bad { border-color: var(--fumble); }
   .tray-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
   .tray-main { display: flex; align-items: baseline; gap: 10px; }
   .big { font-size: 40px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
   .flag { font-weight: 800; letter-spacing: .1em; font-size: 13px; }
-  .flag.crit { color: var(--crit); } .flag.fumble { color: var(--fumble); }
-  .tray-sub { display: flex; gap: 12px; font-family: var(--mono); font-size: 12px; }
+  .flag.good { color: var(--crit); } .flag.bad { color: var(--fumble); }
+  .tray-sub { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--mono); font-size: 12px; }
   .faces { color: var(--muted); }
   .tray-label { font-size: 12px; color: var(--muted); }
   .time { font-family: var(--mono); color: var(--muted); }
 
   .log ol { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
   .log li { padding: 4px 6px; border-left: 2px solid var(--line); }
-  .log li.crit { border-left-color: var(--crit); } .log li.fumble { border-left-color: var(--fumble); }
+  .log li.good { border-left-color: var(--crit); } .log li.bad { border-left-color: var(--fumble); }
   .log .row .lbl { flex: 1; margin: 0; }
   .tabs.views .tab { font-size: 13px; }
   .log.full ol { gap: 6px; }
   .log.full li { font-size: 13px; }
   .lognote { color: var(--ink); font-style: italic; margin-top: 1px; }
-  .weapon-row { display: grid; grid-template-columns: 1fr 56px 90px 28px; gap: 4px; align-items: center; }
-  .weapon-row .ghost { padding: 4px; }
+  .item-row { display: flex; gap: 4px; align-items: center; }
+  .item-row > * { flex: 1 1 60px; min-width: 0; }
+  .item-row .item-name { flex: 2 1 100px; }
+  .item-row .ghost { flex: 0 0 28px; padding: 4px; }
+  .statgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 6px; }
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .toggle input { width: auto; }
+  .games { display: flex; flex-direction: column; gap: 6px; }
+  .gamebtn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; }
+  .gamebtn.on { border-color: var(--accent); }
+  .linkish { background: none; border: none; padding: 0; font-weight: 700; letter-spacing: .02em; }
+  .linkish:hover { color: var(--accent); }
+  .warn { background: var(--pill); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+  .unit { font-size: 14px; color: var(--muted); }
   .error { color: var(--fumble); font-size: 12px; }
+  .error.box { border: 1px solid var(--fumble); border-radius: 8px; padding: 8px 10px; }
+  .error.box ul { margin: 4px 0 0; padding-left: 18px; }
   .ghost.danger { color: var(--fumble); font-weight: 600; }
 </style>
 </head>
@@ -102,20 +116,23 @@
   // Load the bundle with the same ?v= stamp the headless page opened us with, so a fresh
   // open always gets fresh code despite GitHub Pages' 10-minute cache.
   const v = new URLSearchParams(location.search).get('v') || Date.now();
+  const app = document.getElementById('app');
   const { startApp, standaloneBackend, miroBackend } = await import('./panel.bundle.js?v=' + v);
+  // Game files load separately, so a newly uploaded game works without rebuilding anything.
+  const games = {
+    list: async () => (await import('./games/list.js?v=' + v)).default,
+    load: async (id) => (await import(`./games/${id}.js?v=${v}`)).default,
+  };
   async function pickBackend() {
     const framed = window.self !== window.top;
     if (framed && window.miro?.board) {
       try { await miro.board.getUserInfo(); return miroBackend(); }
-      catch (e) {
-        document.getElementById('app').textContent = 'Miro connection failed: ' + (e && e.message || e);
-        throw e;
-      }
+      catch (e) { app.textContent = 'Miro connection failed: ' + (e && e.message || e); throw e; }
     }
-    if (framed) document.getElementById('app').textContent = 'Miro SDK did not load (miro.js blocked?)';
+    if (framed) app.textContent = 'Miro SDK did not load (miro.js blocked?)';
     return standaloneBackend();
   }
-  startApp(document.getElementById('app'), await pickBackend());
+  startApp(app, await pickBackend(), games).catch((e) => { app.textContent = 'Something went wrong: ' + e.message; });
 </script>
 </body>
 </html>

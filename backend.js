@@ -1,15 +1,12 @@
-// Backend adapter. The UI only talks to this interface, so swapping the
-// standalone version for the Miro + Google Sheet version later touches
-// nothing in app.js.
+// Backend adapter. The UI only talks to this interface:
+//   getUser() / setUser(name)        -> { id, name }
+//   getBoardGame() / setBoardGame(id)
+//   loadCharacters(userId)           -> [character]   (all games; the UI filters)
+//   saveCharacter(character, game)   -> character
+//   logRoll(entry) / showOnTray(entry)
+//   status()                         -> warning text or ''
 //
-// Interface:
-//   getUser()                 -> { id, name }
-//   loadCharacters(userId)    -> [character]
-//   saveCharacter(character)  -> character
-//   logRoll(entry)            -> void       (append to the permanent log)
-//   showOnTray(entry)         -> void       (update the shared dice tray)
-//
-// character = { id, ownerId, ownerName, name, dice: {DEX,INS,MIG,WLP}, weaponDamage, damageType }
+// This one is the standalone test version: everything lives in this browser.
 
 const KEY = 'diceRoller.standalone';
 
@@ -24,10 +21,7 @@ export function standaloneBackend() {
   return {
     mode: 'standalone',
 
-    async getUser() {
-      const s = load();
-      return s.user || null;   // null -> UI asks for a name, then calls setUser
-    },
+    async getUser() { return load().user || null; },
 
     async setUser(name) {
       const s = load();
@@ -36,9 +30,11 @@ export function standaloneBackend() {
       return s.user;
     },
 
+    async getBoardGame() { return load().game || null; },
+    async setBoardGame(id) { const s = load(); s.game = id; save(s); },
+
     async loadCharacters(userId) {
-      const s = load();
-      return (s.characters || []).filter((c) => c.ownerId === userId);
+      return (load().characters || []).filter((c) => c.ownerId === userId);
     },
 
     async saveCharacter(ch) {
@@ -53,14 +49,11 @@ export function standaloneBackend() {
 
     async logRoll(entry) {
       const s = load();
-      s.log = s.log || [];
-      s.log.push(entry);
-      if (s.log.length > 500) s.log = s.log.slice(-500);
+      s.log = (s.log || []).concat(entry).slice(-500);
       save(s);
     },
 
-    async showOnTray(entry) {
-      // Standalone: nothing shared to update. The in-panel tray preview shows it.
-    },
+    async showOnTray() {},
+    async status() { return ''; },
   };
 }
