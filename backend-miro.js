@@ -5,6 +5,8 @@ import { SHEET_URL } from './config.js';
 
 const CHAR_KEY = 'diceRoller.characters';
 const TRAY_KEY = 'diceTrayId';
+const HIST_KEY = 'diceTrayHistory';
+const HIST_N = 9;
 
 // Weapons travel to the sheet as one text cell: "Greatsword +10 physical; Fireball +15 fire"
 function weaponsToText(list) {
@@ -34,7 +36,16 @@ function saveChars(list) { try { localStorage.setItem(CHAR_KEY, JSON.stringify(l
 
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
-function trayContent(e) {
+function trayLine(e) {
+  const flag = e.crit ? ' CRIT' : e.fumble ? ' FUMBLE' : '';
+  let s = `${e.local.slice(11)} ${e.character || e.player}: <b>${e.total}</b>`;
+  if (e.type !== 'plain') s += ` (HR ${e.hr})`;
+  if (e.damage !== '' && e.damage != null) s += ` · ${e.damage} ${e.damageType}`;
+  s += ` · ${e.label}${e.weapon ? ' · ' + e.weapon : ''} [${e.dice}]${flag}`;
+  return esc(s).replace(/&lt;b&gt;|&lt;\/b&gt;/g, (m) => (m === '&lt;b&gt;' ? '<b>' : '</b>'));
+}
+
+function trayContent(e, history) {
   const flag = e.crit ? ' CRIT' : e.fumble ? ' FUMBLE' : '';
   const lines = [
     `<p><b>${esc(e.character || e.player)}</b> rolled <b>${e.total}</b>${flag}</p>`,
@@ -44,9 +55,12 @@ function trayContent(e) {
     if (e.damage !== '' && e.damage != null) l += ` · ${e.damage} ${esc(e.damageType)}`;
     lines.push(`<p>${l}</p>`);
   }
-  lines.push(`<p>${esc(e.label)}${e.weapon ? ' · ' + esc(e.weapon) : ''}</p>`);
-  lines.push(`<p>[${esc(e.dice)}]</p>`);
+  lines.push(`<p>${esc(e.label)}${e.weapon ? ' · ' + esc(e.weapon) : ''} [${esc(e.dice)}]</p>`);
   lines.push(`<p>${esc(e.local)}</p>`);
+  if (history.length) {
+    lines.push('<p>────────────</p>');
+    for (const line of history) lines.push(`<p>${line}</p>`);
+  }
   return lines.join('');
 }
 
@@ -75,11 +89,11 @@ export function miroBackend() {
       content: '<p><b>Dice Tray</b></p><p>Waiting for the first roll…</p>',
       x: vp.x + vp.width / 2,
       y: vp.y + vp.height / 2,
-      width: 320,
-      height: 180,
+      width: 420,
+      height: 420,
       style: {
         fillColor: '#fff7e0', borderColor: '#b8431e', borderWidth: 2,
-        fontSize: 14, textAlign: 'left', textAlignVertical: 'top', color: '#1f1d1a',
+        fontSize: 12, textAlign: 'left', textAlignVertical: 'top', color: '#1f1d1a',
       },
     });
     await miro.board.setAppData(TRAY_KEY, shape.id);
@@ -132,7 +146,11 @@ export function miroBackend() {
     async showOnTray(entry) {
       let tray = await findTray();
       if (!tray) tray = await createTray();
-      tray.content = trayContent(entry);
+      let history = [];
+      try { history = (await miro.board.getAppData(HIST_KEY)) || []; } catch {}
+      tray.content = trayContent(entry, history.slice(0, HIST_N));
+      history = [trayLine(entry), ...history].slice(0, HIST_N);
+      miro.board.setAppData(HIST_KEY, history).catch(() => {});
       tray.style = { ...tray.style, fillColor: trayColor(entry) };
       await tray.sync();
     },

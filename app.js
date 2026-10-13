@@ -9,6 +9,7 @@ export async function startApp(root, backend) {
     characters: [],
     character: null,
     rollType: 'check',
+    view: 'roll',
     sessionLog: [],
     editing: false,
   };
@@ -70,14 +71,51 @@ export async function startApp(root, backend) {
 
   // ---------- render ----------
   function render() {
+    if (state.view === 'log') {
+      root.replaceChildren(header(), viewTabs(), fullLogView());
+      return;
+    }
     root.replaceChildren(
       header(),
+      viewTabs(),
       state.editing ? characterEditor() : characterBar(),
       rollTypeTabs(),
       rollForm(),
       trayPreview(),
       sessionLogView(),
     );
+  }
+
+  function viewTabs() {
+    return h('div', { class: 'tabs views' },
+      h('button', { class: 'tab' + (state.view === 'roll' ? ' on' : ''), onclick: () => { state.view = 'roll'; render(); } }, 'Roll'),
+      h('button', { class: 'tab' + (state.view === 'log' ? ' on' : ''), onclick: () => { state.view = 'log'; render(); } },
+        `Log${state.sessionLog.length ? ` (${state.sessionLog.length})` : ''}`),
+    );
+  }
+
+  function logEntry(e) {
+    return h('li', { class: e.crit ? 'crit' : e.fumble ? 'fumble' : '' },
+      h('div', {}, h('b', {}, e.character || e.player), ' ', e.summary),
+      h('div', { class: 'time' }, e.local),
+      e.note ? h('div', { class: 'lognote' }, e.note) : null);
+  }
+
+  function fullLogView() {
+    if (!state.sessionLog.length) return h('div', { class: 'tray empty' }, 'No rolls this session yet.');
+    return h('div', { class: 'log full' },
+      h('div', { class: 'row' },
+        h('span', { class: 'lbl' }, 'Your rolls this session'),
+        h('button', { class: 'ghost', onclick: exportCsv }, 'CSV'),
+        clearButton()),
+      h('ol', {}, state.sessionLog.map(logEntry)),
+    );
+  }
+
+  function clearButton() {
+    return state.confirmClear
+      ? h('button', { class: 'ghost danger', onclick: () => { state.sessionLog = []; state.confirmClear = false; render(); } }, 'Really clear?')
+      : h('button', { class: 'ghost', onclick: () => { state.confirmClear = true; render(); setTimeout(() => { state.confirmClear = false; render(); }, 4000); } }, 'Clear');
   }
 
   function header() {
@@ -257,17 +295,9 @@ export async function startApp(root, backend) {
     if (!state.sessionLog.length) return h('div');
     return h('div', { class: 'log' },
       h('div', { class: 'row' },
-        h('span', { class: 'lbl' }, `Session log (${state.sessionLog.length})`),
-        h('button', { class: 'ghost', onclick: exportCsv }, 'CSV'),
-        state.confirmClear
-          ? h('button', { class: 'ghost danger', onclick: () => { state.sessionLog = []; state.confirmClear = false; render(); } }, 'Really clear?')
-          : h('button', { class: 'ghost', onclick: () => { state.confirmClear = true; render(); setTimeout(() => { state.confirmClear = false; render(); }, 4000); } }, 'Clear'),
-      ),
-      h('ol', {}, state.sessionLog.slice(0, 50).map((e) =>
-        h('li', { class: e.crit ? 'crit' : e.fumble ? 'fumble' : '' },
-          h('div', {}, h('b', {}, e.character || e.player), ' ', e.summary),
-          h('div', { class: 'time' }, e.local),
-          e.note ? h('div', { class: 'lognote' }, e.note) : null))),
+        h('span', { class: 'lbl' }, 'Recent'),
+        h('button', { class: 'ghost', onclick: () => { state.view = 'log'; render(); } }, 'Full log →')),
+      h('ol', {}, state.sessionLog.slice(0, 5).map(logEntry)),
     );
   }
 
