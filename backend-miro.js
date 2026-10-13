@@ -170,9 +170,11 @@ export function miroBackend() {
       tray.content = trayContent(entry, history.slice(0, HIST_N));
       history = [trayLine(entry), ...history].slice(0, HIST_N);
       miro.board.setAppData(HIST_KEY, history).catch(() => {});
-      if (tray.shape !== 'rectangle') tray.shape = 'rectangle'; // converts trays made before the square corners
       tray.style = { ...tray.style, fillColor: trayColor(entry) };
-      await tray.sync();
+      if (tray.shape === 'rectangle') { await tray.sync(); return; }
+      // Trays made before the square corners: convert, but never let that block the roll showing.
+      try { tray.shape = 'rectangle'; await tray.sync(); }
+      catch { trayItem = null; tray = await findTray(); tray.content = trayContent(entry, history.slice(1)); tray.style = { ...tray.style, fillColor: trayColor(entry) }; await tray.sync(); }
     },
 
     // Called from the panel's "Tray" button: recreate if missing, then zoom to it.
