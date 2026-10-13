@@ -30,6 +30,11 @@
   .char { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
   .row { display: flex; gap: 8px; align-items: center; }
   .row.title { font-weight: 600; }
+  .edit-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center;
+    gap: 8px; margin: -10px -10px 0; padding: 8px 10px; background: var(--panel); border-bottom: 1px solid var(--line);
+    border-radius: 10px 10px 0 0; }
+  .edit-head .title { font-weight: 600; }
+  .edit-head .primary { padding: 5px 14px; }
   .row select { flex: 1; }
   .dice-line { display: flex; flex-wrap: wrap; gap: 6px; }
   .pill { background: var(--pill); border-radius: 999px; padding: 2px 9px; font-size: 12px; font-family: var(--mono); }

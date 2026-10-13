@@ -924,8 +924,28 @@ async function startApp(root, backend, games) {
       : h('input', { type: f.type === 'number' ? 'number' : 'text', title: f.label || f.key, placeholder: f.label || f.key,
         value: it[f.key], oninput: (e) => (it[f.key] = f.type === 'number' ? +e.target.value || 0 : e.target.value) });
 
+    const save = async () => {
+      if (!draft.name.trim()) { errorMsg = 'Give the character a name.'; render(); return; }
+      if (/[;]/.test(draft.name) || draft.items.some((it) => /[;()]/.test(it.name))) { errorMsg = 'Names can\'t contain ; or brackets.'; render(); return; }
+      draft.items = draft.items.filter((it) => it.name.trim());
+      draft.game = game.id;
+      errorMsg = '';
+      try {
+        const saved = await backend.saveCharacter(draft, game);
+        await loadCharacters(saved.id);
+      } catch (e) { errorMsg = `Couldn't save: ${e.message}`; render(); return; }
+      state.editing = false; render();
+    };
+    // Save sits at the top (sticky) and at the bottom, so it's reachable however short the panel is.
+    const actions = () => h('div', { class: 'row' },
+      h('button', { class: 'primary', onclick: save }, 'Save'),
+      state.character ? h('button', { class: 'ghost', onclick: () => { state.draft = null; errorMsg = ''; state.editing = false; render(); } }, 'Cancel') : null,
+      state.character ? h('button', { class: 'ghost', onclick: () => { state.character = null; state.draft = null; state.editing = true; render(); } }, '+ New') : null);
+
     return h('div', { class: 'char editing' },
-      h('div', { class: 'row title' }, state.character ? 'Edit character' : 'New character'),
+      h('div', { class: 'edit-head' },
+        h('span', { class: 'title' }, state.character ? 'Edit character' : 'New character'),
+        actions()),
       field('Name', h('input', { value: draft.name, placeholder: 'Character name', oninput: (e) => (draft.name = e.target.value) })),
       groups.map((g) => [
         g.name ? h('div', { class: 'lbl' }, g.name) : null,
@@ -940,22 +960,7 @@ async function startApp(root, backend, games) {
         h('button', { class: 'ghost', onclick: () => { draft.items.push(newItem(game)); render(); } }, `+ Add ${String(game.items.label || 'item').toLowerCase()}`),
       ] : null,
       errorMsg ? h('div', { class: 'error' }, errorMsg) : null,
-      h('div', { class: 'row' },
-        h('button', { class: 'primary', onclick: async () => {
-          if (!draft.name.trim()) { errorMsg = 'Give the character a name.'; render(); return; }
-          if (/[;]/.test(draft.name) || draft.items.some((it) => /[;()]/.test(it.name))) { errorMsg = 'Names can\'t contain ; or brackets.'; render(); return; }
-          draft.items = draft.items.filter((it) => it.name.trim());
-          draft.game = game.id;
-          errorMsg = '';
-          try {
-            const saved = await backend.saveCharacter(draft, game);
-            await loadCharacters(saved.id);
-          } catch (e) { errorMsg = `Couldn't save: ${e.message}`; render(); return; }
-          state.editing = false; render();
-        } }, 'Save'),
-        state.character ? h('button', { class: 'ghost', onclick: () => { state.draft = null; errorMsg = ''; state.editing = false; render(); } }, 'Cancel') : null,
-        state.character ? h('button', { class: 'ghost', onclick: () => { state.character = null; state.draft = null; state.editing = true; render(); } }, '+ New') : null,
-      ),
+      actions(),
     );
   }
 
