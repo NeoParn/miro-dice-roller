@@ -2,102 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dice Roller</title>
-<style>
-  :root {
-    --bg: #faf8f4; --panel: #ffffff; --ink: #1f1d1a; --muted: #6f6a62; --line: #e4dfd6;
-    --accent: #b8431e; --accent-ink: #fff; --crit: #1f7a4d; --fumble: #a3281e; --pill: #efeae2;
-    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg: #1b1a18; --panel: #242220; --ink: #ece7df; --muted: #a29b90; --line: #3a3733;
-    --accent: #e0643a; --crit: #4fc98a; --fumble: #ff6b5e; --pill: #332f2a;
-  } }
-  :root[data-theme="dark"] {
-    --bg: #1b1a18; --panel: #242220; --ink: #ece7df; --muted: #a29b90; --line: #3a3733;
-    --accent: #e0643a; --crit: #4fc98a; --fumble: #ff6b5e; --pill: #332f2a;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 var(--font); }
-  #app { max-width: 360px; margin: 0 auto; padding: 12px 14px 24px; display: flex; flex-direction: column; gap: 12px; }
-
-  .hdr { display: flex; justify-content: space-between; align-items: baseline; }
-  .hdr .game { font-weight: 700; letter-spacing: .02em; }
-  .hdr .user { color: var(--muted); font-size: 12px; }
-
-  .char { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-  .row { display: flex; gap: 8px; align-items: center; }
-  .row.title { font-weight: 600; }
-  .row select { flex: 1; }
-  .dice-line { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pill { background: var(--pill); border-radius: 999px; padding: 2px 9px; font-size: 12px; font-family: var(--mono); }
-  .field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-
-  input, select, button { font: inherit; color: inherit; }
-  input, select { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; width: 100%; }
-  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  button { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; cursor: pointer; }
-  button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  button.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 4px 8px; }
-  button.ghost:hover { color: var(--accent); }
-
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
-  .tab { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 10px; color: var(--muted); margin-bottom: -1px; }
-  .tab.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
-
-  .form { display: flex; flex-direction: column; gap: 8px; }
-  .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 4px; }
-  .attrs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .attr { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 4px; line-height: 1.1; }
-  .attr small { color: var(--muted); font-family: var(--mono); font-size: 11px; }
-  .attr.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  .attr.on small { color: var(--accent-ink); opacity: .85; }
-  .stepper { display: flex; align-items: center; gap: 8px; }
-  .stepper > span { min-width: 2.5em; text-align: center; font-family: var(--mono); font-size: 16px; }
-  .stepper > button { width: 36px; }
-  .expr { font-family: var(--mono); font-size: 16px; }
-  .quick { display: flex; flex-wrap: wrap; gap: 2px; }
-  .quick .ghost { font-family: var(--mono); font-size: 12px; }
-  .note { font-size: 13px; }
-  .roll { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; letter-spacing: .12em; padding: 12px; font-size: 15px; margin-top: 4px; }
-  .roll:active { transform: translateY(1px); }
-  .muted { color: var(--muted); } .small { font-size: 12px; }
-
-  .tray { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
-  .tray.empty { color: var(--muted); text-align: center; padding: 16px; }
-  .tray.is-crit { border-color: var(--crit); } .tray.is-fumble { border-color: var(--fumble); }
-  .tray-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
-  .tray-main { display: flex; align-items: baseline; gap: 10px; }
-  .big { font-size: 40px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-  .flag { font-weight: 800; letter-spacing: .1em; font-size: 13px; }
-  .flag.crit { color: var(--crit); } .flag.fumble { color: var(--fumble); }
-  .tray-sub { display: flex; gap: 12px; font-family: var(--mono); font-size: 12px; }
-  .faces { color: var(--muted); }
-  .tray-label { font-size: 12px; color: var(--muted); }
-  .time { font-family: var(--mono); color: var(--muted); }
-
-  .log ol { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
-  .log li { padding: 4px 6px; border-left: 2px solid var(--line); }
-  .log li.crit { border-left-color: var(--crit); } .log li.fumble { border-left-color: var(--fumble); }
-  .log .row .lbl { flex: 1; margin: 0; }
-  .lognote { color: var(--ink); font-style: italic; margin-top: 1px; }
-  .weapon-row { display: grid; grid-template-columns: 1fr 56px 90px 28px; gap: 4px; align-items: center; }
-  .weapon-row .ghost { padding: 4px; }
-  .error { color: var(--fumble); font-size: 12px; }
-  .ghost.danger { color: var(--fumble); font-weight: 600; }
-</style>
+<title>Dice Roller (headless)</title>
+<script src="https://miro.com/app/static/sdk/v2/miro.js"></script>
 </head>
 <body>
-<div id="app"></div>
-<script type="module">
-  import { startApp } from './app.js';
-  import { standaloneBackend } from './backend.js';
-  startApp(document.getElementById('app'), standaloneBackend());
+<script>
+  // Headless entry: runs while the board is open. Opens the panel on toolbar icon click.
+  miro.board.ui.on('icon:click', async () => {
+    await miro.board.ui.openPanel({ url: 'panel.html', height: 720 });
+  });
 </script>
 </body>
 </html>
