@@ -78,7 +78,7 @@ export function miroBackend() {
   async function createTray() {
     const vp = await miro.board.viewport.get();
     const shape = await miro.board.createShape({
-      shape: 'round_rectangle',
+      shape: 'rectangle',
       content: '<p><b>Dice Tray</b></p><p>Waiting for the first roll…</p>',
       x: vp.x + vp.width / 2,
       y: vp.y + vp.height / 2,
@@ -170,6 +170,7 @@ export function miroBackend() {
       tray.content = trayContent(entry, history.slice(0, HIST_N));
       history = [trayLine(entry), ...history].slice(0, HIST_N);
       miro.board.setAppData(HIST_KEY, history).catch(() => {});
+      if (tray.shape !== 'rectangle') tray.shape = 'rectangle'; // converts trays made before the square corners
       tray.style = { ...tray.style, fillColor: trayColor(entry) };
       await tray.sync();
     },
