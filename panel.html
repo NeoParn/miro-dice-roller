@@ -100,9 +100,15 @@
   import { standaloneBackend } from './backend.js';
   import { miroBackend } from './backend-miro.js';
   async function pickBackend() {
-    if (window.self !== window.top && window.miro?.board) {
-      try { await miro.board.getUserInfo(); return miroBackend(); } catch { /* not inside Miro */ }
+    const framed = window.self !== window.top;
+    if (framed && window.miro?.board) {
+      try { await miro.board.getUserInfo(); return miroBackend(); }
+      catch (e) {
+        document.getElementById('app').textContent = 'Miro connection failed: ' + (e && e.message || e);
+        throw e;
+      }
     }
+    if (framed) document.getElementById('app').textContent = 'Miro SDK did not load (miro.js blocked?)';
     return standaloneBackend();
   }
   startApp(document.getElementById('app'), await pickBackend());

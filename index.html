@@ -9,7 +9,7 @@
 <script>
   // Headless entry: runs while the board is open. Opens the panel on toolbar icon click.
   miro.board.ui.on('icon:click', async () => {
-    await miro.board.ui.openPanel({ url: 'panel.html', height: 720 });
+    await miro.board.ui.openPanel({ url: 'panel.html?v=' + Date.now(), height: 720 });
   });
 </script>
 </body>
