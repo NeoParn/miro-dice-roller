@@ -1163,7 +1163,7 @@ async function startApp(root, backend, games) {
     const key = `${state.game.id}:${r.id}`;
     let result;
     try { result = resolveRoll(state.game, r.id, formFor(r), state.character, defaultRng); errorMsg = ''; }
-    catch (e) { errorMsg = cap(e.message); render(); return; }
+    catch (e) { errorMsg = `Can't roll: ${e.message}`; render(); return; }
 
     const now = new Date();
     const styles = result.flags.map((x) => x.style);
